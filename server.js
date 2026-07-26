@@ -172,7 +172,13 @@ async function handleApi(req, res, url) {
 }
 
 async function proxyUpstream(req, res, upstreamUrl, ticket) {
-  const headers = {};
+  const headers = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36",
+    "Accept": "*/*",
+    "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+    "Referer": "https://ww4.embedtv.lat/",
+    "Origin": "https://ww4.embedtv.lat"
+  };
   if (req.headers.range) headers.Range = req.headers.range;
 
   const upstreamResponse = await fetch(upstreamUrl, { headers, redirect: "follow" });
