@@ -128,6 +128,11 @@ function clearSessionCookie(res) {
   res.setHeader("Set-Cookie", `jv_session=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0${secure}`);
 }
 
+function redirect(res, location) {
+  res.writeHead(302, { Location: location });
+  res.end();
+}
+
 function requireAuth(req, res) {
   const session = getSession(req);
   if (!session) {
@@ -218,7 +223,14 @@ async function readBody(req) {
   const chunks = [];
   for await (const chunk of req) chunks.push(chunk);
   const text = Buffer.concat(chunks).toString("utf8");
-  return text ? JSON.parse(text) : {};
+  if (!text) return {};
+
+  const contentType = String(req.headers["content-type"] || "");
+  if (contentType.includes("application/x-www-form-urlencoded")) {
+    return Object.fromEntries(new URLSearchParams(text));
+  }
+
+  return JSON.parse(text);
 }
 
 function normalizeChannel(input) {
@@ -374,6 +386,33 @@ async function handleApi(req, res, url) {
   sendJson(res, 404, { error: "Rota nao encontrada." });
 }
 
+async function handleFormRoutes(req, res, url) {
+  if (url.pathname === "/login" && req.method === "POST") {
+    const body = await readBody(req);
+    const user = await findUserByEmail(body.email);
+
+    if (!user || !verifyPassword(body.password || "", user)) {
+      redirect(res, "/?login=erro");
+      return true;
+    }
+
+    const sessionId = createSession(user);
+    setSessionCookie(res, sessionId);
+    redirect(res, "/");
+    return true;
+  }
+
+  if (url.pathname === "/logout" && req.method === "POST") {
+    const sessionId = parseCookies(req).jv_session;
+    if (sessionId) sessions.delete(sessionId);
+    clearSessionCookie(res);
+    redirect(res, "/");
+    return true;
+  }
+
+  return false;
+}
+
 async function proxyUpstream(req, res, upstreamUrl, ticket) {
   const headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36",
@@ -477,6 +516,9 @@ async function serveStatic(req, res, url) {
 const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
+    if (await handleFormRoutes(req, res, url)) {
+      return;
+    }
     if (url.pathname.startsWith("/api/")) {
       await handleApi(req, res, url);
       return;

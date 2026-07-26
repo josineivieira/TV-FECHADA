@@ -31,6 +31,7 @@ const loginEmail = document.querySelector("#loginEmail");
 const loginPassword = document.querySelector("#loginPassword");
 const loginError = document.querySelector("#loginError");
 const logoutButton = document.querySelector("#logoutButton");
+const logoutForm = document.querySelector(".logout-form");
 const adminToggle = document.querySelector("#adminToggle");
 const adminPanel = document.querySelector("#adminPanel");
 const userForm = document.querySelector("#userForm");
@@ -527,7 +528,8 @@ loginForm.addEventListener("submit", async (event) => {
   await loadChannels();
 });
 
-logoutButton.addEventListener("click", async () => {
+logoutForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
   await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
   stopStream();
   showLogin();

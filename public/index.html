@@ -9,7 +9,7 @@
 </head>
 <body>
   <section class="login-screen" id="loginScreen">
-    <form class="login-card" id="loginForm">
+    <form class="login-card" id="loginForm" method="post" action="/login">
       <div class="brand login-brand">
         <div class="mark">JV</div>
         <div>
@@ -19,11 +19,11 @@
       </div>
       <label>
         <span>Email</span>
-        <input id="loginEmail" type="email" autocomplete="email" required>
+        <input id="loginEmail" name="email" type="email" autocomplete="email" required>
       </label>
       <label>
         <span>Senha</span>
-        <input id="loginPassword" type="password" autocomplete="current-password" required>
+        <input id="loginPassword" name="password" type="password" autocomplete="current-password" required>
       </label>
       <button class="play-button" type="submit">Entrar</button>
       <p class="login-error" id="loginError"></p>
@@ -46,7 +46,9 @@
       </div>
 
       <button class="admin-toggle" id="adminToggle" type="button" hidden>Painel admin</button>
-      <button class="admin-toggle" id="logoutButton" type="button">Sair</button>
+      <form class="logout-form" method="post" action="/logout">
+        <button class="admin-toggle" id="logoutButton" type="submit">Sair</button>
+      </form>
 
       <div class="rail-footer">
         Escolha uma categoria e selecione um canal para assistir.

@@ -209,6 +209,10 @@ h1 {
   border-color: var(--line);
 }
 
+.logout-form {
+  margin: 0;
+}
+
 .category:hover,
 .category.active,
 .admin-toggle:hover {
