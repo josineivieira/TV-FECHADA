@@ -12,6 +12,7 @@ const PORT = Number(process.env.PORT || 3000);
 const ROOT = __dirname;
 const PUBLIC_DIR = path.join(ROOT, "public");
 const TICKET_TTL_MS = 10 * 60 * 1000;
+const APP_VERSION = "2026-07-26-stream-headers";
 const ticketSecret = crypto.randomBytes(32).toString("hex");
 const tickets = new Map();
 
@@ -122,7 +123,7 @@ function normalizeChannel(input) {
 
 async function handleApi(req, res, url) {
   if (url.pathname === "/api/health") {
-    sendJson(res, 200, { ok: true, name: "JV TV" });
+    sendJson(res, 200, { ok: true, name: "JV TV", version: APP_VERSION });
     return;
   }
 
