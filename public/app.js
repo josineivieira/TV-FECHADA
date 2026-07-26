@@ -24,8 +24,24 @@ const totalChannels = document.querySelector("#totalChannels");
 const totalCategories = document.querySelector("#totalCategories");
 const currentCategory = document.querySelector("#currentCategory");
 const currentMode = document.querySelector("#currentMode");
+const app = document.querySelector("#app");
+const loginScreen = document.querySelector("#loginScreen");
+const loginForm = document.querySelector("#loginForm");
+const loginEmail = document.querySelector("#loginEmail");
+const loginPassword = document.querySelector("#loginPassword");
+const loginError = document.querySelector("#loginError");
+const logoutButton = document.querySelector("#logoutButton");
+const adminToggle = document.querySelector("#adminToggle");
+const adminPanel = document.querySelector("#adminPanel");
+const userForm = document.querySelector("#userForm");
+const newUserName = document.querySelector("#newUserName");
+const newUserEmail = document.querySelector("#newUserEmail");
+const newUserPassword = document.querySelector("#newUserPassword");
+const newUserRole = document.querySelector("#newUserRole");
+const usersList = document.querySelector("#usersList");
 
 let channels = [];
+let currentUser = null;
 let hls = null;
 let activeChannelId = "";
 let activeStreamUrl = "";
@@ -51,6 +67,39 @@ document.addEventListener("click", (event) => {
 
 function setStatus(message) {
   statusText.textContent = message;
+}
+
+async function apiFetch(url, options = {}) {
+  const response = await fetch(url, {
+    credentials: "same-origin",
+    ...options,
+    headers: {
+      ...(options.body ? { "Content-Type": "application/json" } : {}),
+      ...(options.headers || {})
+    }
+  });
+
+  if (response.status === 401) {
+    showLogin();
+    throw new Error("Login necessario.");
+  }
+
+  return response;
+}
+
+function showLogin(message = "") {
+  currentUser = null;
+  app.hidden = true;
+  loginScreen.hidden = false;
+  loginError.textContent = message;
+}
+
+function showApp(user) {
+  currentUser = user;
+  loginScreen.hidden = true;
+  app.hidden = false;
+  adminToggle.hidden = user.role !== "admin";
+  if (user.role !== "admin") adminPanel.hidden = true;
 }
 
 function modeLabel() {
@@ -232,7 +281,7 @@ function setActiveChannel(url) {
 }
 
 async function requestStream(channelId) {
-  const response = await fetch(`/api/channels/${encodeURIComponent(channelId)}/play`, { method: "POST" });
+  const response = await apiFetch(`/api/channels/${encodeURIComponent(channelId)}/play`, { method: "POST" });
   if (!response.ok) {
     throw new Error("Nao foi possivel abrir o canal.");
   }
@@ -378,12 +427,46 @@ function renderChannels() {
 
 async function loadChannels() {
   setStatus("Carregando canais...");
-  const response = await fetch("/api/channels");
+  const response = await apiFetch("/api/channels");
   channels = await response.json();
   renderCategories();
   renderChannels();
   updateStats();
   setStatus("Escolha uma categoria ou pesquise um canal");
+}
+
+async function loadUsers() {
+  if (!currentUser || currentUser.role !== "admin") return;
+
+  const response = await apiFetch("/api/users");
+  const users = await response.json();
+  usersList.innerHTML = "";
+
+  users.forEach((user) => {
+    const row = document.createElement("div");
+    row.className = "user-row";
+    row.innerHTML = `
+      <span>
+        <strong>${user.name}</strong>
+        <span>${user.email}</span>
+      </span>
+      <span class="role-badge">${user.role}</span>
+    `;
+    usersList.appendChild(row);
+  });
+}
+
+async function checkSession() {
+  const response = await fetch("/api/auth/me", { credentials: "same-origin" });
+  const data = await response.json();
+
+  if (!data.user) {
+    showLogin();
+    return;
+  }
+
+  showApp(data.user);
+  await loadChannels();
 }
 
 document.querySelector("#stopButton").addEventListener("click", stopStream);
@@ -401,6 +484,65 @@ searchInput.addEventListener("input", renderChannels);
 playMode.addEventListener("change", () => {
   updateStats();
   if (activeChannelId) playChannelById(activeChannelId);
+});
+
+loginForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  loginError.textContent = "";
+
+  const response = await fetch("/api/auth/login", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      email: loginEmail.value,
+      password: loginPassword.value
+    })
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    loginError.textContent = data.error || "Erro ao entrar.";
+    return;
+  }
+
+  loginPassword.value = "";
+  showApp(data.user);
+  await loadChannels();
+});
+
+logoutButton.addEventListener("click", async () => {
+  await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
+  stopStream();
+  showLogin();
+});
+
+adminToggle.addEventListener("click", async () => {
+  adminPanel.hidden = !adminPanel.hidden;
+  if (!adminPanel.hidden) await loadUsers();
+});
+
+userForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const response = await apiFetch("/api/users", {
+    method: "POST",
+    body: JSON.stringify({
+      name: newUserName.value,
+      email: newUserEmail.value,
+      password: newUserPassword.value,
+      role: newUserRole.value
+    })
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    setStatus(data.error || "Erro ao criar usuario");
+    return;
+  }
+
+  userForm.reset();
+  setStatus("Usuario criado");
+  await loadUsers();
 });
 
 video.addEventListener("playing", () => {
@@ -437,7 +579,7 @@ video.addEventListener("pause", () => {
   if (activeChannelId) setStatus("Pausado");
 });
 
-loadChannels().catch((error) => {
+checkSession().catch((error) => {
   console.error(error);
-  setStatus("Erro ao carregar canais");
+  showLogin("Erro ao carregar sessao.");
 });

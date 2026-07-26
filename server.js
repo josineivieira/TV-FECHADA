@@ -6,7 +6,16 @@ const { loadEnv } = require("./env");
 
 loadEnv();
 
-const { addChannel, findChannelById, readChannels } = require("./database");
+const {
+  addChannel,
+  addUser,
+  countUsers,
+  ensureUserIndexes,
+  findChannelById,
+  findUserByEmail,
+  readChannels,
+  readUsers
+} = require("./database");
 
 const PORT = Number(process.env.PORT || 3000);
 const ROOT = __dirname;
@@ -14,8 +23,10 @@ const PUBLIC_DIR = path.join(ROOT, "public");
 const TICKET_TTL_MS = 10 * 60 * 1000;
 const APP_VERSION = "2026-07-26-stream-headers";
 const PLAYBACK_MODE = process.env.PLAYBACK_MODE || "proxy";
+const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const ticketSecret = crypto.randomBytes(32).toString("hex");
 const tickets = new Map();
+const sessions = new Map();
 
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
@@ -50,6 +61,114 @@ function sanitizeChannel(channel) {
     category: channel.category,
     mode: channel.mode || "hls"
   };
+}
+
+function sanitizeUser(user) {
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    createdAt: user.createdAt
+  };
+}
+
+function parseCookies(req) {
+  return String(req.headers.cookie || "").split(";").reduce((cookies, part) => {
+    const index = part.indexOf("=");
+    if (index === -1) return cookies;
+    const key = part.slice(0, index).trim();
+    const value = part.slice(index + 1).trim();
+    cookies[key] = decodeURIComponent(value);
+    return cookies;
+  }, {});
+}
+
+function hashPassword(password, salt = crypto.randomBytes(16).toString("hex")) {
+  const passwordHash = crypto.pbkdf2Sync(String(password), salt, 120000, 32, "sha256").toString("hex");
+  return { salt, passwordHash };
+}
+
+function verifyPassword(password, user) {
+  const result = hashPassword(password, user.salt);
+  return crypto.timingSafeEqual(Buffer.from(result.passwordHash, "hex"), Buffer.from(user.passwordHash, "hex"));
+}
+
+function createSession(user) {
+  const sessionId = crypto.randomBytes(32).toString("base64url");
+  sessions.set(sessionId, {
+    user: sanitizeUser(user),
+    createdAt: Date.now()
+  });
+  return sessionId;
+}
+
+function getSession(req) {
+  const sessionId = parseCookies(req).jv_session;
+  if (!sessionId) return null;
+
+  const session = sessions.get(sessionId);
+  if (!session) return null;
+
+  if (Date.now() - session.createdAt > SESSION_TTL_MS) {
+    sessions.delete(sessionId);
+    return null;
+  }
+
+  return session;
+}
+
+function setSessionCookie(res, sessionId) {
+  const secure = process.env.RENDER ? "; Secure" : "";
+  res.setHeader("Set-Cookie", `jv_session=${encodeURIComponent(sessionId)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}${secure}`);
+}
+
+function clearSessionCookie(res) {
+  const secure = process.env.RENDER ? "; Secure" : "";
+  res.setHeader("Set-Cookie", `jv_session=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0${secure}`);
+}
+
+function requireAuth(req, res) {
+  const session = getSession(req);
+  if (!session) {
+    sendJson(res, 401, { error: "Login necessario." });
+    return null;
+  }
+  return session.user;
+}
+
+function requireAdmin(req, res) {
+  const user = requireAuth(req, res);
+  if (!user) return null;
+  if (user.role !== "admin") {
+    sendJson(res, 403, { error: "Acesso negado." });
+    return null;
+  }
+  return user;
+}
+
+async function ensureInitialAdmin() {
+  await ensureUserIndexes();
+  const total = await countUsers();
+  if (total > 0) return;
+
+  const email = String(process.env.ADMIN_EMAIL || "").trim().toLowerCase();
+  const password = String(process.env.ADMIN_PASSWORD || "");
+  if (!email || !password) {
+    console.warn("Nenhum usuario admin criado. Configure ADMIN_EMAIL e ADMIN_PASSWORD.");
+    return;
+  }
+
+  const passwordData = hashPassword(password);
+  await addUser({
+    id: crypto.randomUUID(),
+    name: process.env.ADMIN_NAME || "Administrador",
+    email,
+    role: "admin",
+    ...passwordData,
+    createdAt: new Date().toISOString()
+  });
+  console.log(`Admin inicial criado: ${email}`);
 }
 
 function signUrl(ticket, upstreamUrl) {
@@ -128,7 +247,78 @@ async function handleApi(req, res, url) {
     return;
   }
 
+  if (url.pathname === "/api/auth/me" && req.method === "GET") {
+    const session = getSession(req);
+    sendJson(res, 200, { user: session ? session.user : null });
+    return;
+  }
+
+  if (url.pathname === "/api/auth/login" && req.method === "POST") {
+    const body = await readBody(req);
+    const user = await findUserByEmail(body.email);
+
+    if (!user || !verifyPassword(body.password || "", user)) {
+      sendJson(res, 401, { error: "Email ou senha invalidos." });
+      return;
+    }
+
+    const sessionId = createSession(user);
+    setSessionCookie(res, sessionId);
+    sendJson(res, 200, { user: sanitizeUser(user) });
+    return;
+  }
+
+  if (url.pathname === "/api/auth/logout" && req.method === "POST") {
+    const sessionId = parseCookies(req).jv_session;
+    if (sessionId) sessions.delete(sessionId);
+    clearSessionCookie(res);
+    sendJson(res, 200, { ok: true });
+    return;
+  }
+
+  if (url.pathname === "/api/users" && req.method === "GET") {
+    requireAdmin(req, res);
+    if (res.writableEnded) return;
+    const users = await readUsers();
+    sendJson(res, 200, users);
+    return;
+  }
+
+  if (url.pathname === "/api/users" && req.method === "POST") {
+    requireAdmin(req, res);
+    if (res.writableEnded) return;
+
+    const body = await readBody(req);
+    const name = String(body.name || "").trim();
+    const email = String(body.email || "").trim().toLowerCase();
+    const password = String(body.password || "");
+    const role = body.role === "admin" ? "admin" : "user";
+
+    if (!name || !email || password.length < 6) {
+      sendJson(res, 400, { error: "Informe nome, email e senha com no minimo 6 caracteres." });
+      return;
+    }
+
+    const passwordData = hashPassword(password);
+    try {
+      const user = await addUser({
+        id: crypto.randomUUID(),
+        name,
+        email,
+        role,
+        ...passwordData,
+        createdAt: new Date().toISOString()
+      });
+      sendJson(res, 201, sanitizeUser(user));
+    } catch (error) {
+      sendJson(res, error.code === "DUPLICATE_USER" ? 409 : 500, { error: error.message });
+    }
+    return;
+  }
+
   if (url.pathname === "/api/channels" && req.method === "GET") {
+    requireAuth(req, res);
+    if (res.writableEnded) return;
     const channels = await readChannels();
     sendJson(res, 200, channels.map(sanitizeChannel));
     return;
@@ -136,6 +326,8 @@ async function handleApi(req, res, url) {
 
   const playMatch = url.pathname.match(/^\/api\/channels\/([^/]+)\/play$/);
   if (playMatch && req.method === "POST") {
+    requireAuth(req, res);
+    if (res.writableEnded) return;
     const id = decodeURIComponent(playMatch[1]);
     const channel = await findChannelById(id);
 
@@ -223,6 +415,9 @@ async function proxyUpstream(req, res, upstreamUrl, ticket) {
 }
 
 async function handleStream(req, res, url) {
+  requireAuth(req, res);
+  if (res.writableEnded) return;
+
   const match = url.pathname.match(/^\/stream\/([^/]+)\/(manifest|proxy)(?:\/([^/]+))?$/);
   if (!match) {
     sendText(res, 404, "Stream nao encontrado.");
@@ -297,6 +492,11 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, () => {
-  console.log(`JV TV rodando em http://localhost:${PORT}`);
+ensureInitialAdmin().then(() => {
+  server.listen(PORT, () => {
+    console.log(`JV TV rodando em http://localhost:${PORT}`);
+  });
+}).catch((error) => {
+  console.error(error);
+  process.exit(1);
 });

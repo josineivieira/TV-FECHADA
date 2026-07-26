@@ -12,7 +12,15 @@ services:
         value: jv_tv
       - key: MONGODB_COLLECTION
         value: channels
+      - key: MONGODB_USERS_COLLECTION
+        value: users
       - key: ADMIN_TOKEN
         sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: ADMIN_NAME
+        value: Administrador
       - key: PLAYBACK_MODE
         value: direct

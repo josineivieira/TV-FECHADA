@@ -8,7 +8,29 @@
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 </head>
 <body>
-  <main class="app">
+  <section class="login-screen" id="loginScreen">
+    <form class="login-card" id="loginForm">
+      <div class="brand login-brand">
+        <div class="mark">JV</div>
+        <div>
+          <h1>JV TV</h1>
+          <small>Acesso restrito</small>
+        </div>
+      </div>
+      <label>
+        <span>Email</span>
+        <input id="loginEmail" type="email" autocomplete="email" required>
+      </label>
+      <label>
+        <span>Senha</span>
+        <input id="loginPassword" type="password" autocomplete="current-password" required>
+      </label>
+      <button class="play-button" type="submit">Entrar</button>
+      <p class="login-error" id="loginError"></p>
+    </form>
+  </section>
+
+  <main class="app" id="app" hidden>
     <aside class="rail">
       <div class="brand">
         <div class="mark">JV</div>
@@ -22,6 +44,9 @@
         <div class="rail-title">Categorias</div>
         <nav class="categories" id="categoryList"></nav>
       </div>
+
+      <button class="admin-toggle" id="adminToggle" type="button" hidden>Painel admin</button>
+      <button class="admin-toggle" id="logoutButton" type="button">Sair</button>
 
       <div class="rail-footer">
         Escolha uma categoria e selecione um canal para assistir.
@@ -74,6 +99,24 @@
           <strong id="currentMode">Estavel</strong>
           <span>Modo ativo</span>
         </div>
+      </section>
+
+      <section class="admin-panel" id="adminPanel" hidden>
+        <div>
+          <h2>Usuarios</h2>
+          <p>Crie acessos para assistir ao sistema.</p>
+        </div>
+        <form class="admin-form" id="userForm">
+          <input id="newUserName" placeholder="Nome" autocomplete="off" required>
+          <input id="newUserEmail" type="email" placeholder="email@exemplo.com" autocomplete="off" required>
+          <input id="newUserPassword" type="password" placeholder="Senha" autocomplete="new-password" required>
+          <select id="newUserRole">
+            <option value="user">Usuario</option>
+            <option value="admin">Admin</option>
+          </select>
+          <button class="play-button" type="submit">Criar</button>
+        </form>
+        <div class="users-list" id="usersList"></div>
       </section>
 
     </section>

@@ -60,7 +60,11 @@ Em `Environment`, adicione:
 MONGODB_URI=sua_uri_nova_do_mongodb
 MONGODB_DB=jv_tv
 MONGODB_COLLECTION=channels
+MONGODB_USERS_COLLECTION=users
 ADMIN_TOKEN=um_token_forte
+ADMIN_EMAIL=seu_email_admin
+ADMIN_PASSWORD=sua_senha_admin
+ADMIN_NAME=Administrador
 PLAYBACK_MODE=direct
 ```
 
