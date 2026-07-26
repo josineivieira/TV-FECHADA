@@ -61,9 +61,12 @@ MONGODB_URI=sua_uri_nova_do_mongodb
 MONGODB_DB=jv_tv
 MONGODB_COLLECTION=channels
 ADMIN_TOKEN=um_token_forte
+PLAYBACK_MODE=direct
 ```
 
 Nao coloque `PORT`: o Render define automaticamente.
+
+Use `PLAYBACK_MODE=proxy` para tentar esconder as origens pelo backend. Se a origem bloquear o Render com erro 403, use `PLAYBACK_MODE=direct` para tocar direto no navegador.
 
 ## 6. Deploy
 

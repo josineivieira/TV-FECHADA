@@ -13,6 +13,7 @@ const ROOT = __dirname;
 const PUBLIC_DIR = path.join(ROOT, "public");
 const TICKET_TTL_MS = 10 * 60 * 1000;
 const APP_VERSION = "2026-07-26-stream-headers";
+const PLAYBACK_MODE = process.env.PLAYBACK_MODE || "proxy";
 const ticketSecret = crypto.randomBytes(32).toString("hex");
 const tickets = new Map();
 
@@ -123,7 +124,7 @@ function normalizeChannel(input) {
 
 async function handleApi(req, res, url) {
   if (url.pathname === "/api/health") {
-    sendJson(res, 200, { ok: true, name: "JV TV", version: APP_VERSION });
+    sendJson(res, 200, { ok: true, name: "JV TV", version: APP_VERSION, playbackMode: PLAYBACK_MODE });
     return;
   }
 
@@ -143,9 +144,18 @@ async function handleApi(req, res, url) {
       return;
     }
 
+    if (PLAYBACK_MODE === "direct") {
+      sendJson(res, 200, {
+        streamUrl: channel.url,
+        direct: true
+      });
+      return;
+    }
+
     const ticket = createTicket(channel);
     sendJson(res, 200, {
       streamUrl: `/stream/${ticket}/manifest`,
+      direct: false,
       expiresIn: Math.floor(TICKET_TTL_MS / 1000)
     });
     return;

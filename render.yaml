@@ -14,3 +14,5 @@ services:
         value: channels
       - key: ADMIN_TOKEN
         sync: false
+      - key: PLAYBACK_MODE
+        value: direct
