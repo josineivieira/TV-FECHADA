@@ -572,45 +572,232 @@ video {
 }
 
 @media (max-width: 760px) {
+  body {
+    overflow: hidden;
+  }
+
   .app {
     grid-template-columns: 1fr;
+    grid-template-rows: auto auto minmax(0, 1fr);
+    height: 100svh;
+    overflow: hidden;
   }
 
   .rail {
     height: auto;
     min-height: 0;
-    max-height: 38vh;
+    max-height: none;
     border-width: 0 0 1px;
-    overflow: auto;
+    padding: 12px;
+    gap: 10px;
+    overflow: hidden;
+  }
+
+  .brand {
+    min-height: 36px;
+  }
+
+  .mark {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+  }
+
+  h1 {
+    font-size: 18px;
+  }
+
+  .brand small,
+  .rail-footer {
+    display: none;
+  }
+
+  .rail-title {
+    margin-bottom: 8px;
   }
 
   .categories {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
+    gap: 8px;
+    max-height: none;
+    margin-top: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0 2px 4px;
+    scroll-snap-type: x proximity;
+  }
+
+  .category {
+    flex: 0 0 auto;
+    min-height: 38px;
+    grid-template-columns: auto auto;
+    padding: 0 12px;
+    scroll-snap-align: start;
+  }
+
+  .category.active {
+    box-shadow: inset 0 -3px 0 var(--accent);
+  }
+
+  .admin-toggle {
+    min-height: 38px;
+  }
+
+  .rail > .admin-toggle {
+    width: 100%;
   }
 
   .main {
     height: auto;
-    min-height: 62vh;
-    overflow: visible;
+    min-height: 0;
+    padding: 10px 12px;
+    gap: 10px;
+    overflow: hidden;
   }
 
-  .topbar,
-  .quick-row,
-  .content-strip,
-  .admin-form {
+  .topbar {
     grid-template-columns: 1fr;
+    min-height: 0;
+    padding: 10px;
+    gap: 8px;
+  }
+
+  .mode-select,
+  .top-button,
+  .stop-button,
+  .search-input,
+  .play-button {
+    width: 100%;
+    height: 40px;
+  }
+
+  .now-title {
+    font-size: 15px;
+  }
+
+  .status {
+    white-space: normal;
+    line-height: 1.25;
   }
 
   .screen {
-    min-height: 50vh;
+    flex: 0 0 auto;
+    min-height: 0;
+    aspect-ratio: 16 / 9;
+    border-radius: 8px;
   }
 
-  body,
-  .app {
+  .welcome h2 {
+    font-size: 28px;
+  }
+
+  .welcome p {
+    font-size: 13px;
+  }
+
+  .quick-row {
+    grid-template-columns: 1fr;
+  }
+
+  .content-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .metric {
+    min-height: 58px;
+    padding: 9px;
+  }
+
+  .metric strong {
+    font-size: 20px;
+  }
+
+  .admin-panel {
+    max-height: 28vh;
     overflow: auto;
+    padding: 10px;
+  }
+
+  .admin-form {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .library {
+    grid-column: auto;
+    height: auto;
+    min-height: 0;
+    padding: 10px 12px 12px;
+    border-width: 1px 0 0;
+    overflow: hidden;
+  }
+
+  .library-head {
+    gap: 8px;
+  }
+
+  .library h2 {
+    display: none;
   }
 
   .channel-list {
     grid-template-columns: 1fr;
+    max-height: none;
+    overflow: auto;
+    padding-right: 0;
+  }
+
+  .channel {
+    min-height: 58px;
+    grid-template-columns: 42px minmax(0, 1fr);
+    padding: 8px;
+  }
+
+  .logo {
+    width: 42px;
+    height: 42px;
+  }
+
+  .name {
+    font-size: 14px;
+  }
+
+  .hint {
+    display: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .login-screen {
+    padding: 14px;
+  }
+
+  .login-card {
+    padding: 18px;
+  }
+
+  .content-strip {
+    display: none;
+  }
+
+  .main {
+    padding-bottom: 8px;
+  }
+
+  .screen {
+    aspect-ratio: 16 / 10;
+  }
+
+  .welcome {
+    padding: 16px;
+  }
+
+  .welcome h2 {
+    font-size: 24px;
+  }
+
+  .channel {
+    min-height: 56px;
   }
 }
