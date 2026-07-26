@@ -1,0 +1,15 @@
+{
+  "name": "jv-tv",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sistema local de TV com canais HLS organizados por categoria.",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "mongodb": "^6.17.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: jv-tv
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DB
+        value: jv_tv
+      - key: MONGODB_COLLECTION
+        value: channels
+      - key: ADMIN_TOKEN
+        sync: false

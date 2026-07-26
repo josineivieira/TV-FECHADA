@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JV TV</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+</head>
+<body>
+  <main class="app">
+    <aside class="rail">
+      <div class="brand">
+        <div class="mark">JV</div>
+        <div>
+          <h1>JV TV</h1>
+          <small>Sistema de canais</small>
+        </div>
+      </div>
+
+      <div>
+        <div class="rail-title">Categorias</div>
+        <nav class="categories" id="categoryList"></nav>
+      </div>
+
+      <div class="rail-footer">
+        Escolha uma categoria e selecione um canal para assistir.
+      </div>
+    </aside>
+
+    <section class="main">
+      <header class="topbar">
+        <div>
+          <span class="now-title" id="nowTitle">Tela inicial</span>
+          <div class="status" id="status">Carregando sistema...</div>
+        </div>
+        <select class="mode-select" id="playMode" title="Modo de reproducao">
+          <option value="stable">Modo estavel</option>
+          <option value="light">Modo leve</option>
+          <option value="delayed">Modo internet lenta</option>
+        </select>
+        <button class="top-button" id="fullscreenButton" title="Tela cheia">Tela cheia</button>
+      </header>
+
+      <div class="screen" id="screen">
+        <video id="video" controls playsinline preload="none"></video>
+        <div class="welcome" id="welcome">
+          <div class="welcome-box">
+            <div class="welcome-kicker">Ao vivo</div>
+            <h2>Escolha um canal</h2>
+            <p>Use a lista por categoria para iniciar a transmissao.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="quick-row">
+        <button class="stop-button" type="button" id="stopButton">Parar transmissao</button>
+      </div>
+
+      <section class="content-strip" aria-label="Resumo">
+        <div class="metric">
+          <strong id="totalChannels">0</strong>
+          <span>Canais cadastrados</span>
+        </div>
+        <div class="metric">
+          <strong id="totalCategories">0</strong>
+          <span>Categorias</span>
+        </div>
+        <div class="metric">
+          <strong id="currentCategory">Todos</strong>
+          <span>Filtro atual</span>
+        </div>
+        <div class="metric">
+          <strong id="currentMode">Estavel</strong>
+          <span>Modo ativo</span>
+        </div>
+      </section>
+
+    </section>
+
+    <aside class="library">
+      <div class="library-head">
+        <h2>Canais</h2>
+        <input class="search-input" id="searchInput" type="search" placeholder="Buscar canal" autocomplete="off">
+      </div>
+      <div class="channel-list" id="channelList"></div>
+      <div class="hint">
+        Para conexao fraca, selecione o modo internet lenta antes de abrir o canal.
+      </div>
+    </aside>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>

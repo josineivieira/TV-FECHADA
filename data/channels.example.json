@@ -1,0 +1,9 @@
+[
+  {
+    "id": "canal-exemplo",
+    "name": "Canal Exemplo",
+    "category": "Teste",
+    "url": "https://exemplo.com/stream.m3u8",
+    "mode": "hls"
+  }
+]
