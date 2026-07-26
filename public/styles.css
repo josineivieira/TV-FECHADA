@@ -40,6 +40,13 @@ button {
   cursor: pointer;
 }
 
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 3px solid var(--accent-2);
+  outline-offset: 3px;
+}
+
 .app {
   height: 100vh;
   overflow: hidden;
@@ -519,6 +526,15 @@ video {
   background: #23171b;
 }
 
+.channel:focus-visible,
+.category:focus-visible,
+.admin-toggle:focus-visible,
+.top-button:focus-visible,
+.stop-button:focus-visible,
+.play-button:focus-visible {
+  transform: scale(1.015);
+}
+
 .logo {
   width: 46px;
   height: 46px;
@@ -809,5 +825,173 @@ video {
   .library {
     height: calc(100svh - 245px);
     min-height: 340px;
+  }
+}
+
+@media (min-width: 1600px) {
+  body {
+    font-size: 18px;
+  }
+
+  .app {
+    grid-template-columns: 300px minmax(0, 1fr) 460px;
+  }
+
+  .rail,
+  .library,
+  .main {
+    padding: 24px;
+  }
+
+  .brand {
+    min-height: 58px;
+  }
+
+  .mark {
+    width: 54px;
+    height: 54px;
+    font-size: 22px;
+  }
+
+  h1 {
+    font-size: 26px;
+  }
+
+  .brand small,
+  .status,
+  .meta,
+  .hint {
+    font-size: 15px;
+  }
+
+  .rail-title {
+    font-size: 15px;
+  }
+
+  .category,
+  .admin-toggle {
+    min-height: 62px;
+    border-radius: 8px;
+    font-size: 20px;
+  }
+
+  .category-count {
+    font-size: 16px;
+  }
+
+  .topbar {
+    min-height: 82px;
+    padding: 14px 16px;
+  }
+
+  .now-title {
+    font-size: 22px;
+  }
+
+  .mode-select,
+  .top-button,
+  .stop-button,
+  .search-input,
+  .play-button,
+  .admin-form input,
+  .admin-form select {
+    height: 58px;
+    border-radius: 8px;
+    font-size: 20px;
+  }
+
+  .mode-select {
+    min-width: 230px;
+  }
+
+  .screen {
+    border-radius: 8px;
+  }
+
+  .welcome h2 {
+    font-size: 58px;
+  }
+
+  .welcome p {
+    font-size: 21px;
+  }
+
+  .quick-row {
+    grid-template-columns: 1fr;
+  }
+
+  .metric {
+    min-height: 96px;
+    padding: 16px;
+  }
+
+  .metric strong {
+    font-size: 34px;
+  }
+
+  .metric span {
+    font-size: 15px;
+  }
+
+  .library h2 {
+    font-size: 22px;
+  }
+
+  .channel-list {
+    gap: 12px;
+  }
+
+  .channel {
+    min-height: 86px;
+    grid-template-columns: 62px minmax(0, 1fr);
+    gap: 14px;
+    padding: 12px;
+    border-radius: 8px;
+  }
+
+  .logo {
+    width: 62px;
+    height: 62px;
+    font-size: 22px;
+  }
+
+  .name {
+    font-size: 21px;
+  }
+
+  .meta {
+    margin-top: 6px;
+  }
+}
+
+@media (min-width: 1200px) and (min-height: 650px) and (hover: none) and (pointer: coarse) {
+  .app {
+    grid-template-columns: 280px minmax(0, 1fr) 420px;
+  }
+
+  .rail,
+  .library,
+  .main {
+    padding: 22px;
+  }
+
+  .category,
+  .admin-toggle,
+  .mode-select,
+  .top-button,
+  .stop-button,
+  .search-input,
+  .channel {
+    min-height: 64px;
+    font-size: 20px;
+  }
+
+  .channel {
+    grid-template-columns: 58px minmax(0, 1fr);
+  }
+
+  .logo {
+    width: 58px;
+    height: 58px;
   }
 }

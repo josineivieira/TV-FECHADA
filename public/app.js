@@ -65,6 +65,22 @@ document.addEventListener("click", (event) => {
   console.warn("Nova aba bloqueada:", externalLink.href);
 }, true);
 
+document.addEventListener("keydown", (event) => {
+  const keys = ["ArrowDown", "ArrowUp", "ArrowLeft", "ArrowRight"];
+  if (!keys.includes(event.key)) return;
+
+  const focusable = [...document.querySelectorAll("button:not([hidden]), input:not([hidden]), select:not([hidden])")]
+    .filter((element) => !element.disabled && element.offsetParent !== null);
+  if (!focusable.length) return;
+
+  const currentIndex = Math.max(0, focusable.indexOf(document.activeElement));
+  const direction = event.key === "ArrowDown" || event.key === "ArrowRight" ? 1 : -1;
+  const nextIndex = (currentIndex + direction + focusable.length) % focusable.length;
+
+  focusable[nextIndex].focus();
+  event.preventDefault();
+});
+
 function setStatus(message) {
   statusText.textContent = message;
 }
