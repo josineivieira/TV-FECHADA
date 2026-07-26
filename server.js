@@ -120,12 +120,12 @@ function getSession(req) {
 
 function setSessionCookie(res, sessionId) {
   const secure = process.env.RENDER ? "; Secure" : "";
-  res.setHeader("Set-Cookie", `jv_session=${encodeURIComponent(sessionId)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}${secure}`);
+  res.setHeader("Set-Cookie", `jv_session=${encodeURIComponent(sessionId)}; HttpOnly; Path=/; Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}${secure}`);
 }
 
 function clearSessionCookie(res) {
   const secure = process.env.RENDER ? "; Secure" : "";
-  res.setHeader("Set-Cookie", `jv_session=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0${secure}`);
+  res.setHeader("Set-Cookie", `jv_session=; HttpOnly; Path=/; Max-Age=0${secure}`);
 }
 
 function redirect(res, location) {

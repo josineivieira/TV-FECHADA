@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JV TV</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: table;
+      width: 100%;
+      background: #090d11;
+      color: #f5f8fb;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    .wrap {
+      display: table-cell;
+      vertical-align: middle;
+      padding: 40px;
+    }
+
+    form {
+      width: 520px;
+      max-width: 90%;
+      margin: 0 auto;
+      padding: 28px;
+      background: #111820;
+      border: 2px solid #2b3846;
+      border-radius: 8px;
+    }
+
+    h1 {
+      margin: 0 0 24px;
+      font-size: 36px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 18px;
+      font-size: 22px;
+    }
+
+    input {
+      display: block;
+      width: 100%;
+      height: 58px;
+      margin-top: 8px;
+      padding: 0 14px;
+      box-sizing: border-box;
+      border-radius: 8px;
+      border: 2px solid #2b3846;
+      background: #0d131a;
+      color: #f5f8fb;
+      font-size: 22px;
+    }
+
+    button {
+      width: 100%;
+      height: 62px;
+      border-radius: 8px;
+      border: 2px solid #d84350;
+      background: #ff4f5f;
+      color: white;
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    p {
+      margin: 18px 0 0;
+      color: #9fb0c2;
+      font-size: 18px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <form method="post" action="/login">
+      <h1>JV TV</h1>
+      <label>
+        Email
+        <input name="email" type="text" autocomplete="username" required>
+      </label>
+      <label>
+        Senha
+        <input name="password" type="password" autocomplete="current-password" required>
+      </label>
+      <button type="submit">Entrar</button>
+      <p>Modo compatibilidade para TV</p>
+    </form>
+  </div>
+</body>
+</html>
