@@ -573,17 +573,19 @@ video {
 
 @media (max-width: 760px) {
   body {
-    overflow: hidden;
+    overflow: auto;
   }
 
   .app {
     grid-template-columns: 1fr;
-    grid-template-rows: auto auto minmax(0, 1fr);
-    height: 100svh;
-    overflow: hidden;
+    grid-template-rows: auto auto minmax(280px, 1fr);
+    min-height: 100svh;
+    height: auto;
+    overflow: visible;
   }
 
   .rail {
+    order: 1;
     height: auto;
     min-height: 0;
     max-height: none;
@@ -648,11 +650,12 @@ video {
   }
 
   .main {
+    order: 3;
     height: auto;
     min-height: 0;
     padding: 10px 12px;
     gap: 10px;
-    overflow: hidden;
+    overflow: visible;
   }
 
   .topbar {
@@ -683,7 +686,7 @@ video {
   .screen {
     flex: 0 0 auto;
     min-height: 0;
-    aspect-ratio: 16 / 9;
+    aspect-ratio: 16 / 8.8;
     border-radius: 8px;
   }
 
@@ -700,17 +703,7 @@ video {
   }
 
   .content-strip {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-  }
-
-  .metric {
-    min-height: 58px;
-    padding: 9px;
-  }
-
-  .metric strong {
-    font-size: 20px;
+    display: none;
   }
 
   .admin-panel {
@@ -725,9 +718,10 @@ video {
   }
 
   .library {
+    order: 2;
     grid-column: auto;
-    height: auto;
-    min-height: 0;
+    height: calc(100svh - 260px);
+    min-height: 320px;
     padding: 10px 12px 12px;
     border-width: 1px 0 0;
     overflow: hidden;
@@ -742,8 +736,9 @@ video {
   }
 
   .channel-list {
+    flex: 1;
+    min-height: 0;
     grid-template-columns: 1fr;
-    max-height: none;
     overflow: auto;
     padding-right: 0;
   }
@@ -777,16 +772,12 @@ video {
     padding: 18px;
   }
 
-  .content-strip {
-    display: none;
-  }
-
   .main {
     padding-bottom: 8px;
   }
 
   .screen {
-    aspect-ratio: 16 / 10;
+    aspect-ratio: 16 / 8.5;
   }
 
   .welcome {
@@ -799,5 +790,10 @@ video {
 
   .channel {
     min-height: 56px;
+  }
+
+  .library {
+    height: calc(100svh - 245px);
+    min-height: 340px;
   }
 }
