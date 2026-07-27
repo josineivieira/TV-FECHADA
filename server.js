@@ -2,6 +2,7 @@ const http = require("http");
 const fs = require("fs/promises");
 const path = require("path");
 const crypto = require("crypto");
+const { Readable } = require("stream");
 const { loadEnv } = require("./env");
 
 loadEnv();
@@ -615,18 +616,24 @@ async function proxyUpstream(req, res, upstreamUrl, ticket) {
     return;
   }
 
-  const body = Buffer.from(await upstreamResponse.arrayBuffer());
   const responseHeaders = {
     "Content-Type": contentType || "application/octet-stream",
-    "Cache-Control": "no-store",
-    "Content-Length": body.length
+    "Cache-Control": "no-store"
   };
+  const contentLength = upstreamResponse.headers.get("content-length");
   const acceptRanges = upstreamResponse.headers.get("accept-ranges");
   const contentRange = upstreamResponse.headers.get("content-range");
+  if (contentLength) responseHeaders["Content-Length"] = contentLength;
   if (acceptRanges) responseHeaders["Accept-Ranges"] = acceptRanges;
   if (contentRange) responseHeaders["Content-Range"] = contentRange;
   res.writeHead(upstreamResponse.status, responseHeaders);
-  res.end(body);
+
+  if (!upstreamResponse.body) {
+    res.end();
+    return;
+  }
+
+  Readable.fromWeb(upstreamResponse.body).pipe(res);
 }
 
 async function handleStream(req, res, url) {
