@@ -107,7 +107,7 @@ function createSession(user) {
 
 function getSession(req) {
   const requestUrl = new URL(req.url, `http://${req.headers.host}`);
-  const sessionId = parseCookies(req).jv_session || req.headers["x-tv-session"] || requestUrl.searchParams.get("tv_session");
+  const sessionId = getSessionIdFromRequest(req, requestUrl);
   if (!sessionId) return null;
 
   const session = sessions.get(sessionId);
@@ -119,6 +119,11 @@ function getSession(req) {
   }
 
   return session;
+}
+
+function getSessionIdFromRequest(req, requestUrl = null) {
+  const url = requestUrl || new URL(req.url, `http://${req.headers.host}`);
+  return parseCookies(req).jv_session || req.headers["x-tv-session"] || url.searchParams.get("tv_session") || "";
 }
 
 function setSessionCookie(res, sessionId) {
@@ -348,21 +353,25 @@ function getTicket(ticket) {
   return entry;
 }
 
-function proxiedUrl(ticket, upstreamUrl) {
+function sessionQuery(sessionId) {
+  return sessionId ? `?tv_session=${encodeURIComponent(sessionId)}` : "";
+}
+
+function proxiedUrl(ticket, upstreamUrl, sessionId = "") {
   const entry = getTicket(ticket);
   if (!entry) return "";
 
   const resourceId = signUrl(ticket, upstreamUrl);
   entry.resources.set(resourceId, upstreamUrl);
-  return `/stream/${ticket}/proxy/${resourceId}`;
+  return `/stream/${ticket}/proxy/${resourceId}${sessionQuery(sessionId)}`;
 }
 
-function rewriteManifest(text, baseUrl, ticket) {
+function rewriteManifest(text, baseUrl, ticket, sessionId = "") {
   return text.split(/\r?\n/).map((line) => {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith("#")) return line;
     const upstreamUrl = new URL(trimmed, baseUrl).toString();
-    return proxiedUrl(ticket, upstreamUrl);
+    return proxiedUrl(ticket, upstreamUrl, sessionId);
   }).join("\n");
 }
 
@@ -504,8 +513,9 @@ async function handleApi(req, res, url) {
     }
 
     const ticket = createTicket(channel);
+    const sessionId = getSessionIdFromRequest(req, url);
     sendJson(res, 200, {
-      streamUrl: `/stream/${ticket}/manifest`,
+      streamUrl: `/stream/${ticket}/manifest${sessionQuery(sessionId)}`,
       direct: false,
       expiresIn: Math.floor(TICKET_TTL_MS / 1000)
     });
@@ -590,7 +600,7 @@ async function handleTvRoutes(req, res, url) {
   return true;
 }
 
-async function proxyUpstream(req, res, upstreamUrl, ticket) {
+async function proxyUpstream(req, res, upstreamUrl, ticket, sessionId = "") {
   const headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36",
     "Accept": "*/*",
@@ -611,7 +621,7 @@ async function proxyUpstream(req, res, upstreamUrl, ticket) {
 
   if (isManifest) {
     const text = await upstreamResponse.text();
-    const body = rewriteManifest(text, upstreamUrl, ticket);
+    const body = rewriteManifest(text, upstreamUrl, ticket, sessionId);
     res.writeHead(upstreamResponse.status, {
       "Content-Type": "application/vnd.apple.mpegurl; charset=utf-8",
       "Cache-Control": "no-store",
@@ -642,9 +652,6 @@ async function proxyUpstream(req, res, upstreamUrl, ticket) {
 }
 
 async function handleStream(req, res, url) {
-  requireAuth(req, res);
-  if (res.writableEnded) return;
-
   const match = url.pathname.match(/^\/stream\/([^/]+)\/(manifest|proxy)(?:\/([^/]+))?$/);
   if (!match) {
     sendText(res, 404, "Stream nao encontrado.");
@@ -661,7 +668,7 @@ async function handleStream(req, res, url) {
   }
 
   if (kind === "manifest") {
-    await proxyUpstream(req, res, entry.upstreamUrl, ticket);
+    await proxyUpstream(req, res, entry.upstreamUrl, ticket, getSessionIdFromRequest(req, url));
     return;
   }
 
@@ -671,7 +678,7 @@ async function handleStream(req, res, url) {
     return;
   }
 
-  await proxyUpstream(req, res, upstreamUrl, ticket);
+  await proxyUpstream(req, res, upstreamUrl, ticket, getSessionIdFromRequest(req, url));
 }
 
 async function serveStatic(req, res, url) {

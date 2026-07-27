@@ -602,6 +602,17 @@ video.addEventListener("playing", () => {
   setStatus(playMode.value === "delayed" ? "Ao vivo com atraso" : "Ao vivo");
 });
 
+video.addEventListener("error", () => {
+  const messages = {
+    1: "Reproducao cancelada",
+    2: "Erro de rede ao carregar o filme",
+    3: "Erro ao decodificar o video",
+    4: "Formato de video nao suportado"
+  };
+  const code = video.error ? video.error.code : 0;
+  setStatus(messages[code] || "Erro ao carregar o video");
+});
+
 video.addEventListener("waiting", () => {
   setStatus("Carregando buffer...");
   const now = Date.now();
