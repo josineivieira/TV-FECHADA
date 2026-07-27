@@ -54,6 +54,7 @@ let lastReloadAt = 0;
 let stallTimer = null;
 let bufferTimer = null;
 let delayTimer = null;
+let directVideoTimer = null;
 let tvSession = new URLSearchParams(window.location.search).get("tv_session") || "";
 
 if (tvSession) {
@@ -279,6 +280,7 @@ function getBufferedAhead() {
 function waitForSlowInternetBuffer() {
   clearInterval(bufferTimer);
   clearInterval(delayTimer);
+  clearTimeout(directVideoTimer);
 
   if (playMode.value !== "delayed") {
     video.play().catch(() => setStatus("Clique em reproduzir no player"));
@@ -381,6 +383,12 @@ async function playChannelById(channelId, isReload = false) {
   } else {
     video.src = activeStreamUrl;
     setStatus("Carregando filme...");
+    clearTimeout(directVideoTimer);
+    directVideoTimer = setTimeout(() => {
+      if (activeChannelId === channel.id && video.readyState < 2) {
+        setStatus("Servidor do filme demorou para responder");
+      }
+    }, 15000);
     video.play().catch(() => setStatus("Clique em reproduzir no player"));
   }
 }
@@ -399,6 +407,7 @@ function stopStream() {
   clearInterval(stallTimer);
   clearInterval(bufferTimer);
   clearInterval(delayTimer);
+  clearTimeout(directVideoTimer);
   setActiveChannel("");
   setStatus("Reproducao parada");
 }
@@ -599,7 +608,13 @@ userForm.addEventListener("submit", async (event) => {
 });
 
 video.addEventListener("playing", () => {
+  clearTimeout(directVideoTimer);
   setStatus(playMode.value === "delayed" ? "Ao vivo com atraso" : "Ao vivo");
+});
+
+video.addEventListener("loadedmetadata", () => {
+  clearTimeout(directVideoTimer);
+  setStatus("Filme carregado");
 });
 
 video.addEventListener("error", () => {
@@ -640,7 +655,7 @@ video.addEventListener("stalled", () => {
 video.addEventListener("ended", () => reloadActiveStream("Continuando transmissao..."));
 
 video.addEventListener("pause", () => {
-  if (activeChannelId) setStatus("Pausado");
+  if (activeChannelId && video.readyState >= 2) setStatus("Pausado");
 });
 
 checkSession().catch((error) => {

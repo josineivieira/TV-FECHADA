@@ -26,6 +26,7 @@ const APP_VERSION = "2026-07-26-stream-headers";
 const PLAYBACK_MODE = process.env.PLAYBACK_MODE || "proxy";
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const SERVER_RENDER_CHANNEL_LIMIT = 600;
+const MP4_INITIAL_RANGE_END = 4 * 1024 * 1024 - 1;
 const ticketSecret = crypto.randomBytes(32).toString("hex");
 const tickets = new Map();
 const sessions = new Map();
@@ -343,6 +344,10 @@ function createTicket(channel) {
   return ticket;
 }
 
+function isMp4Channel(channel) {
+  return channel.mode === "mp4" || /\.mp4(\?|$)/i.test(channel.url);
+}
+
 function getTicket(ticket) {
   const entry = tickets.get(ticket);
   if (!entry) return null;
@@ -514,8 +519,9 @@ async function handleApi(req, res, url) {
 
     const ticket = createTicket(channel);
     const sessionId = getSessionIdFromRequest(req, url);
+    const streamPath = isMp4Channel(channel) ? "video.mp4" : "manifest";
     sendJson(res, 200, {
-      streamUrl: `/stream/${ticket}/manifest${sessionQuery(sessionId)}`,
+      streamUrl: `/stream/${ticket}/${streamPath}${sessionQuery(sessionId)}`,
       direct: false,
       expiresIn: Math.floor(TICKET_TTL_MS / 1000)
     });
@@ -610,9 +616,11 @@ async function proxyUpstream(req, res, upstreamUrl, ticket, sessionId = "") {
   };
   const isMp4Url = /\.mp4(\?|$)/i.test(upstreamUrl);
   if (req.headers.range) {
-    headers.Range = req.headers.range;
+    headers.Range = isMp4Url && /^bytes=0-$/i.test(req.headers.range)
+      ? `bytes=0-${MP4_INITIAL_RANGE_END}`
+      : req.headers.range;
   } else if (isMp4Url) {
-    headers.Range = "bytes=0-";
+    headers.Range = `bytes=0-${MP4_INITIAL_RANGE_END}`;
   }
 
   const upstreamResponse = await fetch(upstreamUrl, { headers, redirect: "follow" });
@@ -643,6 +651,11 @@ async function proxyUpstream(req, res, upstreamUrl, ticket, sessionId = "") {
   if (contentRange) responseHeaders["Content-Range"] = contentRange;
   res.writeHead(upstreamResponse.status, responseHeaders);
 
+  if (req.method === "HEAD") {
+    res.end();
+    return;
+  }
+
   if (!upstreamResponse.body) {
     res.end();
     return;
@@ -652,7 +665,7 @@ async function proxyUpstream(req, res, upstreamUrl, ticket, sessionId = "") {
 }
 
 async function handleStream(req, res, url) {
-  const match = url.pathname.match(/^\/stream\/([^/]+)\/(manifest|proxy)(?:\/([^/]+))?$/);
+  const match = url.pathname.match(/^\/stream\/([^/]+)\/(manifest|video\.mp4|proxy)(?:\/([^/]+))?$/);
   if (!match) {
     sendText(res, 404, "Stream nao encontrado.");
     return;
@@ -667,7 +680,7 @@ async function handleStream(req, res, url) {
     return;
   }
 
-  if (kind === "manifest") {
+  if (kind === "manifest" || kind === "video.mp4") {
     await proxyUpstream(req, res, entry.upstreamUrl, ticket, getSessionIdFromRequest(req, url));
     return;
   }
