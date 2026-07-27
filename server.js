@@ -444,10 +444,14 @@ function normalizeVodInfo(payload, fallbackId) {
     name: firstText(data.name, data.title, info.name, info.title, movie.name, movie.title, item.name, item.title),
     description: firstText(data.description, data.plot, data.overview, info.description, info.plot, info.overview, movie.description, movie.plot, item.description, item.plot),
     poster: firstText(data.poster, data.cover, data.image, info.poster, info.cover, info.movie_image, info.backdrop_path, movie.cover, item.poster, item.cover),
+    backdrop: firstText(data.backdrop, data.backdrop_path, info.backdrop, info.backdrop_path, movie.backdrop, item.backdrop),
     year: firstText(data.year, data.release_date, info.year, info.releaseDate, info.release_date, movie.year, item.year),
     duration: firstText(data.duration, info.duration, movie.duration, item.duration),
     rating: firstNumber(data.rating, data.rating_5based, info.rating, info.rating_5based, movie.rating, item.rating),
     genre: firstText(data.genre, data.category, info.genre, info.category, movie.genre, item.genre),
+    cast: firstText(data.cast, info.cast, movie.cast, item.cast),
+    director: firstText(data.director, info.director, movie.director, item.director),
+    streamUrl: firstText(data.url, data.stream_url, info.url, movie.url, item.url),
     raw: data
   };
 }
@@ -459,11 +463,15 @@ async function fetchVodInfo(metadataId) {
 
   const baseUrl = process.env.VOD_INFO_API_URL || "http://webplayerdigital.me/api.php?action=vod_info&id=";
   const infoUrl = baseUrl.includes("{id}") ? baseUrl.replace("{id}", encodeURIComponent(id)) : `${baseUrl}${encodeURIComponent(id)}`;
+  const headers = {
+    "Accept": "application/json",
+    "User-Agent": "Mozilla/5.0"
+  };
+  if (process.env.VOD_INFO_COOKIE) headers.Cookie = process.env.VOD_INFO_COOKIE;
+  if (process.env.VOD_INFO_AUTHORIZATION) headers.Authorization = process.env.VOD_INFO_AUTHORIZATION;
+
   const response = await fetch(infoUrl, {
-    headers: {
-      "Accept": "application/json",
-      "User-Agent": "Mozilla/5.0"
-    },
+    headers,
     redirect: "follow"
   });
   const text = await response.text();
@@ -599,10 +607,21 @@ async function handleApi(req, res, url) {
     const ticket = createTicket(channel);
     const sessionId = getSessionIdFromRequest(req, url);
     const streamPath = isMp4Channel(channel) ? "video.mp4" : "manifest";
+    const metadataId = channel.metadataId || String(channel.id || "").replace(/^filme-/, "");
+    let metadata = null;
+
+    if (isMp4Channel(channel)) {
+      metadata = await fetchVodInfo(metadataId).catch(() => null);
+      if (metadata && metadata.streamUrl && /^https?:\/\//i.test(metadata.streamUrl)) {
+        ticket.upstreamUrl = metadata.streamUrl;
+      }
+    }
+
     sendJson(res, 200, {
       streamUrl: `/stream/${ticket}/${streamPath}${sessionQuery(sessionId)}`,
       direct: false,
-      expiresIn: Math.floor(TICKET_TTL_MS / 1000)
+      expiresIn: Math.floor(TICKET_TTL_MS / 1000),
+      metadata
     });
     return;
   }

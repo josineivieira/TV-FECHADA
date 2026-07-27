@@ -26,3 +26,7 @@ services:
         value: direct
       - key: VOD_INFO_API_URL
         value: http://webplayerdigital.me/api.php?action=vod_info&id=
+      - key: VOD_INFO_COOKIE
+        sync: false
+      - key: VOD_INFO_AUTHORIZATION
+        sync: false

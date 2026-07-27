@@ -340,6 +340,34 @@ async function requestStream(channelId) {
   return response.json();
 }
 
+function showMovieInfo(channel, info) {
+  if (!info || !info.available) return;
+
+  const title = info.name || channel.name;
+  const meta = [
+    info.year,
+    info.genre,
+    info.duration,
+    info.rating ? `Nota ${info.rating}` : "",
+    info.director ? `Direcao ${info.director}` : ""
+  ].filter(Boolean).join(" | ");
+
+  channel.name = title;
+  nowTitle.textContent = title;
+  movieTitle.textContent = title;
+  movieMeta.textContent = meta;
+  movieDescription.textContent = info.description || info.cast || "Descricao indisponivel.";
+
+  const image = info.poster || info.backdrop;
+  if (image && /^https?:\/\//i.test(image)) {
+    moviePoster.src = image;
+    moviePoster.hidden = false;
+  }
+
+  movieDetails.hidden = false;
+  renderChannels();
+}
+
 async function loadMovieInfo(channel) {
   clearMovieDetails();
   if (!channel.metadataId) return;
@@ -351,22 +379,7 @@ async function loadMovieInfo(channel) {
     const info = await response.json();
     if (!info.available) return;
 
-    const title = info.name || channel.name;
-    const meta = [info.year, info.genre, info.duration, info.rating ? `Nota ${info.rating}` : ""].filter(Boolean).join(" | ");
-
-    channel.name = title;
-    nowTitle.textContent = title;
-    movieTitle.textContent = title;
-    movieMeta.textContent = meta;
-    movieDescription.textContent = info.description || "Descricao indisponivel.";
-
-    if (info.poster && /^https?:\/\//i.test(info.poster)) {
-      moviePoster.src = info.poster;
-      moviePoster.hidden = false;
-    }
-
-    movieDetails.hidden = false;
-    renderChannels();
+    showMovieInfo(channel, info);
   } catch (error) {
     console.warn("Nao foi possivel carregar detalhes do filme.", error);
   }
@@ -394,6 +407,7 @@ async function playChannelById(channelId, isReload = false) {
   try {
     const ticket = await requestStream(channel.id);
     activeStreamUrl = ticket.streamUrl;
+    showMovieInfo(channel, ticket.metadata);
   } catch (error) {
     console.error(error);
     setStatus("Erro ao abrir canal");
