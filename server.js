@@ -598,7 +598,12 @@ async function proxyUpstream(req, res, upstreamUrl, ticket) {
     "Referer": "https://ww4.embedtv.lat/",
     "Origin": "https://ww4.embedtv.lat"
   };
-  if (req.headers.range) headers.Range = req.headers.range;
+  const isMp4Url = /\.mp4(\?|$)/i.test(upstreamUrl);
+  if (req.headers.range) {
+    headers.Range = req.headers.range;
+  } else if (isMp4Url) {
+    headers.Range = "bytes=0-";
+  }
 
   const upstreamResponse = await fetch(upstreamUrl, { headers, redirect: "follow" });
   const contentType = upstreamResponse.headers.get("content-type") || "";
@@ -624,7 +629,7 @@ async function proxyUpstream(req, res, upstreamUrl, ticket) {
   const acceptRanges = upstreamResponse.headers.get("accept-ranges");
   const contentRange = upstreamResponse.headers.get("content-range");
   if (contentLength) responseHeaders["Content-Length"] = contentLength;
-  if (acceptRanges) responseHeaders["Accept-Ranges"] = acceptRanges;
+  if (acceptRanges || contentRange || isMp4Url) responseHeaders["Accept-Ranges"] = "bytes";
   if (contentRange) responseHeaders["Content-Range"] = contentRange;
   res.writeHead(upstreamResponse.status, responseHeaders);
 

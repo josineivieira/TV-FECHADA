@@ -332,6 +332,9 @@ async function playChannelById(channelId, isReload = false) {
   }
 
   destroyHls();
+  video.pause();
+  video.removeAttribute("src");
+  video.load();
   activeChannelId = channel.id;
   activeMode = channel.mode || "hls";
   setActiveChannel();
@@ -377,6 +380,7 @@ async function playChannelById(channelId, isReload = false) {
     });
   } else {
     video.src = activeStreamUrl;
+    setStatus("Carregando filme...");
     video.play().catch(() => setStatus("Clique em reproduzir no player"));
   }
 }
