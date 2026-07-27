@@ -10,6 +10,7 @@ const categoryOrder = [
   "Variedades",
   "Teste"
 ];
+const MAX_RENDERED_CHANNELS = 600;
 
 const video = document.querySelector("#video");
 const welcome = document.querySelector("#welcome");
@@ -437,9 +438,10 @@ function renderCategories() {
 
 function renderChannels() {
   const list = filteredChannels();
+  const visibleList = list.slice(0, MAX_RENDERED_CHANNELS);
   channelList.innerHTML = "";
 
-  list.forEach((channel, index) => {
+  visibleList.forEach((channel, index) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "channel";
@@ -456,6 +458,13 @@ function renderChannels() {
     });
     channelList.appendChild(button);
   });
+
+  if (list.length > visibleList.length) {
+    const message = document.createElement("div");
+    message.className = "list-limit";
+    message.textContent = `Mostrando ${visibleList.length} de ${list.length}. Use a busca para encontrar pelo numero do filme.`;
+    channelList.appendChild(message);
+  }
 
   setActiveChannel();
 }

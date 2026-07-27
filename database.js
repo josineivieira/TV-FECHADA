@@ -1,5 +1,9 @@
 const fs = require("fs/promises");
 const path = require("path");
+const {
+  findGeneratedMovieById,
+  readGeneratedMovies
+} = require("./generated-media");
 
 const CHANNELS_FILE = path.join(__dirname, "data", "channels.json");
 const USERS_FILE = path.join(__dirname, "data", "users.json");
@@ -59,13 +63,20 @@ async function ensureMongoSeed(collection) {
 
 async function readChannels() {
   const collection = await getMongoCollection();
-  if (!collection) return readJsonChannels();
+  if (!collection) {
+    const channels = await readJsonChannels();
+    return channels.concat(readGeneratedMovies());
+  }
 
   await ensureMongoSeed(collection);
-  return collection.find({}, { projection: { _id: 0 } }).sort({ category: 1, name: 1 }).toArray();
+  const channels = await collection.find({}, { projection: { _id: 0 } }).sort({ category: 1, name: 1 }).toArray();
+  return channels.concat(readGeneratedMovies());
 }
 
 async function findChannelById(id) {
+  const generatedMovie = findGeneratedMovieById(id);
+  if (generatedMovie) return generatedMovie;
+
   const collection = await getMongoCollection();
   if (!collection) {
     const channels = await readJsonChannels();

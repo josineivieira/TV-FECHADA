@@ -574,6 +574,16 @@ video {
   line-height: 1.45;
 }
 
+.list-limit {
+  padding: 12px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #0d131a;
+}
+
 @media (max-width: 1180px) {
   .app {
     grid-template-columns: 210px minmax(0, 1fr);

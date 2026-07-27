@@ -24,6 +24,7 @@ const TICKET_TTL_MS = 10 * 60 * 1000;
 const APP_VERSION = "2026-07-26-stream-headers";
 const PLAYBACK_MODE = process.env.PLAYBACK_MODE || "proxy";
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const SERVER_RENDER_CHANNEL_LIMIT = 600;
 const ticketSecret = crypto.randomBytes(32).toString("hex");
 const tickets = new Map();
 const sessions = new Map();
@@ -169,12 +170,15 @@ function tvPageHtml({ channels, selectedChannel, sessionId }) {
     <section class="category-block">
       <h2>${escapeHtml(category)}</h2>
       <div class="channels">
-        ${list.map((channel, index) => `
+        ${list.slice(0, SERVER_RENDER_CHANNEL_LIMIT).map((channel, index) => `
           <a class="channel ${selectedChannel && selectedChannel.id === channel.id ? "active" : ""}" href="/tv-watch/${encodeURIComponent(channel.id)}?tv_session=${encodeURIComponent(sessionId)}">
             <span>${String(index + 1).padStart(2, "0")}</span>
             <strong>${escapeHtml(channel.name)}</strong>
           </a>
         `).join("")}
+        ${list.length > SERVER_RENDER_CHANNEL_LIMIT ? `
+          <p class="list-limit">Mostrando ${SERVER_RENDER_CHANNEL_LIMIT} de ${list.length}. Use o app principal para buscar pelo numero do filme.</p>
+        ` : ""}
       </div>
     </section>
   `).join("");
@@ -209,6 +213,7 @@ function tvPageHtml({ channels, selectedChannel, sessionId }) {
     .channel:focus, .channel:hover, .channel.active { border-color: #ff4f5f; background: #23171b; outline: none; }
     .channel span { display: table-cell; width: 64px; height: 56px; text-align: center; vertical-align: middle; border-radius: 8px; background: #22303d; color: #32d0b2; font-size: 22px; font-weight: bold; }
     .channel strong { display: table-cell; vertical-align: middle; padding-left: 16px; font-size: 24px; }
+    .list-limit { color: #9fb0c2; font-size: 18px; line-height: 1.45; }
     @media (max-width: 900px) {
       .left, .right { display: block; width: 100%; }
       video { height: 320px; }
