@@ -135,6 +135,95 @@ function redirect(res, location) {
   res.end();
 }
 
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function tvPageHtml({ channels, selectedChannel, sessionId }) {
+  const categoryMap = channels.reduce((groups, channel) => {
+    const category = channel.category || "Canais";
+    if (!groups[category]) groups[category] = [];
+    groups[category].push(channel);
+    return groups;
+  }, {});
+
+  const player = selectedChannel ? `
+    <section class="player">
+      <h2>${escapeHtml(selectedChannel.name)}</h2>
+      <video src="${escapeHtml(selectedChannel.url)}" controls autoplay playsinline></video>
+    </section>
+  ` : `
+    <section class="player empty">
+      <h2>Escolha um canal</h2>
+      <p>Use o controle remoto para selecionar um canal na lista.</p>
+    </section>
+  `;
+
+  const categories = Object.entries(categoryMap).map(([category, list]) => `
+    <section class="category-block">
+      <h2>${escapeHtml(category)}</h2>
+      <div class="channels">
+        ${list.map((channel, index) => `
+          <a class="channel ${selectedChannel && selectedChannel.id === channel.id ? "active" : ""}" href="/tv-watch/${encodeURIComponent(channel.id)}?tv_session=${encodeURIComponent(sessionId)}">
+            <span>${String(index + 1).padStart(2, "0")}</span>
+            <strong>${escapeHtml(channel.name)}</strong>
+          </a>
+        `).join("")}
+      </div>
+    </section>
+  `).join("");
+
+  return `<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JV TV</title>
+  <style>
+    body { margin: 0; background: #090d11; color: #f5f8fb; font-family: Arial, Helvetica, sans-serif; }
+    .top { display: table; width: 100%; padding: 22px 28px; box-sizing: border-box; background: #0d131a; border-bottom: 2px solid #2b3846; }
+    .brand { display: table-cell; vertical-align: middle; font-size: 34px; font-weight: bold; }
+    .logout { display: table-cell; text-align: right; vertical-align: middle; }
+    .logout a { color: #f5f8fb; text-decoration: none; border: 2px solid #2b3846; padding: 12px 20px; border-radius: 8px; background: #17212b; }
+    .layout { display: table; width: 100%; table-layout: fixed; }
+    .left, .right { display: table-cell; vertical-align: top; padding: 22px; box-sizing: border-box; }
+    .left { width: 58%; }
+    .right { width: 42%; background: #080d12; border-left: 2px solid #2b3846; }
+    .player { background: #050709; border: 2px solid #2b3846; border-radius: 8px; padding: 16px; min-height: 420px; }
+    .player h2 { margin: 0 0 14px; font-size: 30px; }
+    .player p { color: #9fb0c2; font-size: 22px; }
+    video { width: 100%; height: 520px; background: #000; }
+    .category-block { margin-bottom: 22px; }
+    .category-block h2 { margin: 0 0 12px; color: #9fb0c2; font-size: 22px; }
+    .channels { display: block; }
+    .channel { display: table; width: 100%; min-height: 70px; margin-bottom: 10px; padding: 12px; box-sizing: border-box; color: #f5f8fb; text-decoration: none; border: 2px solid #2b3846; border-radius: 8px; background: #111820; }
+    .channel:focus, .channel:hover, .channel.active { border-color: #ff4f5f; background: #23171b; outline: none; }
+    .channel span { display: table-cell; width: 64px; height: 56px; text-align: center; vertical-align: middle; border-radius: 8px; background: #22303d; color: #32d0b2; font-size: 22px; font-weight: bold; }
+    .channel strong { display: table-cell; vertical-align: middle; padding-left: 16px; font-size: 24px; }
+    @media (max-width: 900px) {
+      .left, .right { display: block; width: 100%; }
+      video { height: 320px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="brand">JV TV</div>
+    <div class="logout"><a href="/tv.html">Sair</a></div>
+  </header>
+  <main class="layout">
+    <div class="left">${player}</div>
+    <div class="right">${categories}</div>
+  </main>
+</body>
+</html>`;
+}
+
 function requireAuth(req, res) {
   const session = getSession(req);
   if (!session) {
@@ -400,7 +489,7 @@ async function handleFormRoutes(req, res, url) {
 
     const sessionId = createSession(user);
     setSessionCookie(res, sessionId);
-    redirect(res, url.pathname === "/tv-login" ? `/?tv_session=${encodeURIComponent(sessionId)}` : "/");
+    redirect(res, url.pathname === "/tv-login" ? `/tv-app?tv_session=${encodeURIComponent(sessionId)}` : "/");
     return true;
   }
 
@@ -413,6 +502,36 @@ async function handleFormRoutes(req, res, url) {
   }
 
   return false;
+}
+
+async function handleTvRoutes(req, res, url) {
+  if (url.pathname !== "/tv-app" && !url.pathname.startsWith("/tv-watch/")) {
+    return false;
+  }
+
+  const session = getSession(req);
+  if (!session) {
+    redirect(res, "/tv.html");
+    return true;
+  }
+
+  const channels = await readChannels();
+  const sessionId = url.searchParams.get("tv_session") || parseCookies(req).jv_session || "";
+  let selectedChannel = null;
+
+  if (url.pathname.startsWith("/tv-watch/")) {
+    const id = decodeURIComponent(url.pathname.replace("/tv-watch/", ""));
+    selectedChannel = channels.find((channel) => channel.id === id) || null;
+  }
+
+  const body = tvPageHtml({ channels, selectedChannel, sessionId });
+  res.writeHead(200, {
+    "Content-Type": "text/html; charset=utf-8",
+    "Cache-Control": "no-store",
+    "Content-Length": Buffer.byteLength(body)
+  });
+  res.end(body);
+  return true;
 }
 
 async function proxyUpstream(req, res, upstreamUrl, ticket) {
@@ -519,6 +638,9 @@ const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
     if (await handleFormRoutes(req, res, url)) {
+      return;
+    }
+    if (await handleTvRoutes(req, res, url)) {
       return;
     }
     if (url.pathname.startsWith("/api/")) {
