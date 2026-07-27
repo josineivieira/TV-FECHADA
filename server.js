@@ -104,7 +104,8 @@ function createSession(user) {
 }
 
 function getSession(req) {
-  const sessionId = parseCookies(req).jv_session;
+  const requestUrl = new URL(req.url, `http://${req.headers.host}`);
+  const sessionId = parseCookies(req).jv_session || req.headers["x-tv-session"] || requestUrl.searchParams.get("tv_session");
   if (!sessionId) return null;
 
   const session = sessions.get(sessionId);
@@ -120,7 +121,8 @@ function getSession(req) {
 
 function setSessionCookie(res, sessionId) {
   const secure = process.env.RENDER ? "; Secure" : "";
-  res.setHeader("Set-Cookie", `jv_session=${encodeURIComponent(sessionId)}; HttpOnly; Path=/; Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}${secure}`);
+  const expires = new Date(Date.now() + SESSION_TTL_MS).toUTCString();
+  res.setHeader("Set-Cookie", `jv_session=${encodeURIComponent(sessionId)}; HttpOnly; Path=/; Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}; Expires=${expires}${secure}`);
 }
 
 function clearSessionCookie(res) {
@@ -387,18 +389,18 @@ async function handleApi(req, res, url) {
 }
 
 async function handleFormRoutes(req, res, url) {
-  if (url.pathname === "/login" && req.method === "POST") {
+  if ((url.pathname === "/login" || url.pathname === "/tv-login") && req.method === "POST") {
     const body = await readBody(req);
     const user = await findUserByEmail(body.email);
 
     if (!user || !verifyPassword(body.password || "", user)) {
-      redirect(res, "/?login=erro");
+      redirect(res, url.pathname === "/tv-login" ? "/tv.html?login=erro" : "/?login=erro");
       return true;
     }
 
     const sessionId = createSession(user);
     setSessionCookie(res, sessionId);
-    redirect(res, "/");
+    redirect(res, url.pathname === "/tv-login" ? `/?tv_session=${encodeURIComponent(sessionId)}` : "/");
     return true;
   }
 

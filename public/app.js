@@ -53,6 +53,21 @@ let lastReloadAt = 0;
 let stallTimer = null;
 let bufferTimer = null;
 let delayTimer = null;
+let tvSession = new URLSearchParams(window.location.search).get("tv_session") || "";
+
+if (tvSession) {
+  try {
+    sessionStorage.setItem("jv_tv_session", tvSession);
+  } catch (error) {
+    console.warn("Sessao temporaria apenas na URL.");
+  }
+} else {
+  try {
+    tvSession = sessionStorage.getItem("jv_tv_session") || "";
+  } catch (error) {
+    tvSession = "";
+  }
+}
 
 window.open = function blockedPopup() {
   console.warn("Popup bloqueado pela TV.");
@@ -87,13 +102,16 @@ function setStatus(message) {
 }
 
 async function apiFetch(url, options = {}) {
+  const headers = {
+    ...(options.body ? { "Content-Type": "application/json" } : {}),
+    ...(tvSession ? { "X-TV-Session": tvSession } : {}),
+    ...(options.headers || {})
+  };
+
   const response = await fetch(url, {
     credentials: "same-origin",
     ...options,
-    headers: {
-      ...(options.body ? { "Content-Type": "application/json" } : {}),
-      ...(options.headers || {})
-    }
+    headers
   });
 
   if (response.status === 401) {
@@ -474,7 +492,7 @@ async function loadUsers() {
 }
 
 async function checkSession() {
-  const response = await fetch("/api/auth/me", { credentials: "same-origin" });
+  const response = await apiFetch("/api/auth/me");
   const data = await response.json();
 
   if (!data.user) {
@@ -531,6 +549,10 @@ loginForm.addEventListener("submit", async (event) => {
 logoutForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
+  try {
+    sessionStorage.removeItem("jv_tv_session");
+  } catch (error) {}
+  tvSession = "";
   stopStream();
   showLogin();
 });
