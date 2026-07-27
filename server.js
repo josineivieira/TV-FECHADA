@@ -509,7 +509,7 @@ async function handleApi(req, res, url) {
       return;
     }
 
-    if (PLAYBACK_MODE === "direct") {
+    if (PLAYBACK_MODE === "direct" && !isMp4Channel(channel)) {
       sendJson(res, 200, {
         streamUrl: channel.url,
         direct: true
@@ -709,7 +709,8 @@ async function serveStatic(req, res, url) {
     const ext = path.extname(filePath).toLowerCase();
     res.writeHead(200, {
       "Content-Type": mimeTypes[ext] || "application/octet-stream",
-      "Content-Length": file.length
+      "Content-Length": file.length,
+      "Cache-Control": "no-store"
     });
     res.end(file);
   } catch (error) {
