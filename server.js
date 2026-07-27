@@ -189,35 +189,145 @@ function tvPageHtml({ channels, selectedChannel, sessionId }) {
   <title>JV TV</title>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   <style>
-    body { margin: 0; background: #090d11; color: #f5f8fb; font-family: Arial, Helvetica, sans-serif; }
-    .top { display: table; width: 100%; padding: 22px 28px; box-sizing: border-box; background: #0d131a; border-bottom: 2px solid #2b3846; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      height: 100vh;
+      overflow: hidden;
+      background: #090d11;
+      color: #f5f8fb;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+    .top {
+      height: 82px;
+      display: table;
+      width: 100%;
+      padding: 14px 26px;
+      background: #0d131a;
+      border-bottom: 2px solid #2b3846;
+    }
     .brand { display: table-cell; vertical-align: middle; font-size: 34px; font-weight: bold; }
+    .brand span {
+      display: inline-block;
+      width: 52px;
+      height: 52px;
+      line-height: 52px;
+      margin-right: 14px;
+      text-align: center;
+      border-radius: 8px;
+      background: #ff4f5f;
+      color: white;
+      font-size: 22px;
+    }
     .logout { display: table-cell; text-align: right; vertical-align: middle; }
-    .logout a { color: #f5f8fb; text-decoration: none; border: 2px solid #2b3846; padding: 12px 20px; border-radius: 8px; background: #17212b; }
-    .layout { display: table; width: 100%; table-layout: fixed; }
-    .left, .right { display: table-cell; vertical-align: top; padding: 22px; box-sizing: border-box; }
-    .left { width: 58%; }
-    .right { width: 42%; background: #080d12; border-left: 2px solid #2b3846; }
-    .player { background: #050709; border: 2px solid #2b3846; border-radius: 8px; padding: 16px; min-height: 420px; }
-    .player h2 { margin: 0 0 14px; font-size: 30px; }
-    .player p { color: #9fb0c2; font-size: 22px; }
-    video { width: 100%; height: 520px; background: #000; }
-    .category-block { margin-bottom: 22px; }
-    .category-block h2 { margin: 0 0 12px; color: #9fb0c2; font-size: 22px; }
-    .channels { display: block; }
-    .channel { display: table; width: 100%; min-height: 70px; margin-bottom: 10px; padding: 12px; box-sizing: border-box; color: #f5f8fb; text-decoration: none; border: 2px solid #2b3846; border-radius: 8px; background: #111820; }
-    .channel:focus, .channel:hover, .channel.active { border-color: #ff4f5f; background: #23171b; outline: none; }
-    .channel span { display: table-cell; width: 64px; height: 56px; text-align: center; vertical-align: middle; border-radius: 8px; background: #22303d; color: #32d0b2; font-size: 22px; font-weight: bold; }
-    .channel strong { display: table-cell; vertical-align: middle; padding-left: 16px; font-size: 24px; }
+    .logout a {
+      display: inline-block;
+      color: #f5f8fb;
+      text-decoration: none;
+      border: 2px solid #2b3846;
+      padding: 12px 22px;
+      border-radius: 8px;
+      background: #17212b;
+      font-size: 20px;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 430px;
+      height: calc(100vh - 82px);
+      min-height: 0;
+    }
+    .left, .right { min-height: 0; padding: 22px; }
+    .right {
+      background: #080d12;
+      border-left: 2px solid #2b3846;
+      overflow: auto;
+    }
+    .player {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      background: #050709;
+      border: 2px solid #2b3846;
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: 0 18px 48px rgba(0, 0, 0, 0.35);
+    }
+    .player h2 { margin: 0 0 12px; font-size: 30px; line-height: 1.15; }
+    .player p { margin: 12px 0 0; color: #9fb0c2; font-size: 20px; }
+    video {
+      flex: 1;
+      width: 100%;
+      min-height: 0;
+      background: #000;
+      border-radius: 8px;
+    }
+    .player.empty {
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      background:
+        radial-gradient(circle at 50% 40%, rgba(50, 208, 178, 0.16), transparent 32%),
+        #050709;
+    }
+    .player.empty h2 { font-size: 54px; }
+    .category-block { margin-bottom: 24px; }
+    .category-block h2 {
+      margin: 0 0 12px;
+      color: #9fb0c2;
+      font-size: 19px;
+      text-transform: uppercase;
+    }
+    .channels { display: grid; gap: 10px; }
+    .channel {
+      display: grid;
+      grid-template-columns: 62px minmax(0, 1fr);
+      align-items: center;
+      min-height: 78px;
+      padding: 10px;
+      color: #f5f8fb;
+      text-decoration: none;
+      border: 2px solid #2b3846;
+      border-radius: 8px;
+      background: #111820;
+    }
+    .channel:focus, .channel:hover, .channel.active {
+      border-color: #ff4f5f;
+      background: #23171b;
+      outline: 4px solid #32d0b2;
+      outline-offset: 2px;
+    }
+    .channel span {
+      display: block;
+      width: 56px;
+      height: 56px;
+      line-height: 56px;
+      text-align: center;
+      border-radius: 8px;
+      background: #22303d;
+      color: #32d0b2;
+      font-size: 22px;
+      font-weight: bold;
+    }
+    .channel strong {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      padding-left: 14px;
+      font-size: 23px;
+    }
     @media (max-width: 900px) {
+      body { height: auto; overflow: auto; }
+      .layout { display: block; height: auto; }
       .left, .right { display: block; width: 100%; }
-      video { height: 320px; }
+      .player { height: auto; min-height: 360px; }
+      video { height: 320px; flex: none; }
     }
   </style>
 </head>
 <body>
   <header class="top">
-    <div class="brand">JV TV</div>
+    <div class="brand"><span>JV</span>TV</div>
     <div class="logout"><a href="/tv.html">Sair</a></div>
   </header>
   <main class="layout">
