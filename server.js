@@ -155,7 +155,8 @@ function tvPageHtml({ channels, selectedChannel, sessionId }) {
   const player = selectedChannel ? `
     <section class="player">
       <h2>${escapeHtml(selectedChannel.name)}</h2>
-      <video src="${escapeHtml(selectedChannel.url)}" controls autoplay playsinline></video>
+      <video id="tvPlayer" src="${escapeHtml(selectedChannel.url)}" controls autoplay playsinline></video>
+      <p id="tvStatus">Carregando canal...</p>
     </section>
   ` : `
     <section class="player empty">
@@ -178,12 +179,15 @@ function tvPageHtml({ channels, selectedChannel, sessionId }) {
     </section>
   `).join("");
 
+  const selectedUrl = selectedChannel ? JSON.stringify(selectedChannel.url) : "null";
+
   return `<!doctype html>
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>JV TV</title>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   <style>
     body { margin: 0; background: #090d11; color: #f5f8fb; font-family: Arial, Helvetica, sans-serif; }
     .top { display: table; width: 100%; padding: 22px 28px; box-sizing: border-box; background: #0d131a; border-bottom: 2px solid #2b3846; }
@@ -220,6 +224,52 @@ function tvPageHtml({ channels, selectedChannel, sessionId }) {
     <div class="left">${player}</div>
     <div class="right">${categories}</div>
   </main>
+  <script>
+    (function () {
+      var source = ${selectedUrl};
+      var video = document.getElementById("tvPlayer");
+      var status = document.getElementById("tvStatus");
+      if (!source || !video) return;
+
+      function setStatus(text) {
+        if (status) status.innerHTML = text;
+      }
+
+      if (window.Hls && Hls.isSupported()) {
+        var hls = new Hls({
+          lowLatencyMode: false,
+          startLevel: 0,
+          liveSyncDuration: 28,
+          liveMaxLatencyDuration: 70,
+          maxBufferLength: 30,
+          maxMaxBufferLength: 60,
+          fragLoadingMaxRetry: 12,
+          fragLoadingRetryDelay: 2000,
+          manifestLoadingMaxRetry: 12,
+          manifestLoadingRetryDelay: 2000,
+          abrEwmaDefaultEstimate: 350000
+        });
+        hls.loadSource(source);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, function () {
+          setStatus("Ao vivo");
+          video.play().catch(function () {
+            setStatus("Aperte play no controle remoto.");
+          });
+        });
+        hls.on(Hls.Events.ERROR, function (_, data) {
+          if (data && data.fatal) setStatus("Erro ao carregar. Tente outro canal.");
+        });
+      } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        video.src = source;
+        video.play().catch(function () {
+          setStatus("Aperte play no controle remoto.");
+        });
+      } else {
+        setStatus("Esta TV nao suporta esse tipo de canal. Use TV Box ou navegador atualizado.");
+      }
+    })();
+  </script>
 </body>
 </html>`;
 }
