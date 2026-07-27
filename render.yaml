@@ -24,3 +24,5 @@ services:
         value: Administrador
       - key: PLAYBACK_MODE
         value: direct
+      - key: VOD_INFO_API_URL
+        value: http://webplayerdigital.me/api.php?action=vod_info&id=

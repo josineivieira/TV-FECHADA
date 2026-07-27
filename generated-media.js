@@ -17,7 +17,9 @@ function movieChannel(number) {
     name: `Filme ${number}`,
     category: MOVIE_CATEGORY,
     url: movieUrl(number),
-    mode: "mp4"
+    mode: "mp4",
+    metadataId: String(number),
+    metadataUrl: `http://webplayerdigital.me/api.php?action=vod_info&id=${number}`
   };
 }
 

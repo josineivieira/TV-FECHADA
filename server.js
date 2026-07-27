@@ -62,7 +62,8 @@ function sanitizeChannel(channel) {
     id: channel.id,
     name: channel.name,
     category: channel.category,
-    mode: channel.mode || "hls"
+    mode: channel.mode || "hls",
+    metadataId: channel.metadataId || ""
   };
 }
 
@@ -414,6 +415,84 @@ function normalizeChannel(input) {
   };
 }
 
+const vodInfoCache = new Map();
+
+function firstText(...values) {
+  for (const value of values) {
+    const text = String(value || "").trim();
+    if (text) return text;
+  }
+  return "";
+}
+
+function firstNumber(...values) {
+  for (const value of values) {
+    const number = Number(value);
+    if (Number.isFinite(number) && number > 0) return number;
+  }
+  return null;
+}
+
+function normalizeVodInfo(payload, fallbackId) {
+  const data = payload && typeof payload === "object" ? payload : {};
+  const info = data.info && typeof data.info === "object" ? data.info : {};
+  const movie = data.movie_data && typeof data.movie_data === "object" ? data.movie_data : {};
+  const item = data.data && typeof data.data === "object" ? data.data : {};
+
+  return {
+    id: String(fallbackId),
+    name: firstText(data.name, data.title, info.name, info.title, movie.name, movie.title, item.name, item.title),
+    description: firstText(data.description, data.plot, data.overview, info.description, info.plot, info.overview, movie.description, movie.plot, item.description, item.plot),
+    poster: firstText(data.poster, data.cover, data.image, info.poster, info.cover, info.movie_image, info.backdrop_path, movie.cover, item.poster, item.cover),
+    year: firstText(data.year, data.release_date, info.year, info.releaseDate, info.release_date, movie.year, item.year),
+    duration: firstText(data.duration, info.duration, movie.duration, item.duration),
+    rating: firstNumber(data.rating, data.rating_5based, info.rating, info.rating_5based, movie.rating, item.rating),
+    genre: firstText(data.genre, data.category, info.genre, info.category, movie.genre, item.genre),
+    raw: data
+  };
+}
+
+async function fetchVodInfo(metadataId) {
+  const id = String(metadataId || "").trim();
+  if (!id) return { available: false, error: "Filme sem ID de detalhes." };
+  if (vodInfoCache.has(id)) return vodInfoCache.get(id);
+
+  const baseUrl = process.env.VOD_INFO_API_URL || "http://webplayerdigital.me/api.php?action=vod_info&id=";
+  const infoUrl = baseUrl.includes("{id}") ? baseUrl.replace("{id}", encodeURIComponent(id)) : `${baseUrl}${encodeURIComponent(id)}`;
+  const response = await fetch(infoUrl, {
+    headers: {
+      "Accept": "application/json",
+      "User-Agent": "Mozilla/5.0"
+    },
+    redirect: "follow"
+  });
+  const text = await response.text();
+  let payload = {};
+
+  try {
+    payload = text ? JSON.parse(text) : {};
+  } catch (error) {
+    payload = { description: text };
+  }
+
+  if (!response.ok || payload.error) {
+    const result = {
+      available: false,
+      id,
+      error: payload.error || `Erro ${response.status} ao buscar detalhes.`
+    };
+    vodInfoCache.set(id, result);
+    return result;
+  }
+
+  const result = {
+    available: true,
+    ...normalizeVodInfo(payload, id)
+  };
+  vodInfoCache.set(id, result);
+  return result;
+}
+
 async function handleApi(req, res, url) {
   if (url.pathname === "/api/health") {
     sendJson(res, 200, { ok: true, name: "JV TV", version: APP_VERSION, playbackMode: PLAYBACK_MODE });
@@ -525,6 +604,25 @@ async function handleApi(req, res, url) {
       direct: false,
       expiresIn: Math.floor(TICKET_TTL_MS / 1000)
     });
+    return;
+  }
+
+  const infoMatch = url.pathname.match(/^\/api\/channels\/([^/]+)\/info$/);
+  if (infoMatch && req.method === "GET") {
+    requireAuth(req, res);
+    if (res.writableEnded) return;
+
+    const id = decodeURIComponent(infoMatch[1]);
+    const channel = await findChannelById(id);
+
+    if (!channel) {
+      sendJson(res, 404, { error: "Canal nao encontrado." });
+      return;
+    }
+
+    const metadataId = channel.metadataId || String(channel.id || "").replace(/^filme-/, "");
+    const info = await fetchVodInfo(metadataId);
+    sendJson(res, info.available ? 200 : 502, info);
     return;
   }
 

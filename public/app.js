@@ -41,6 +41,11 @@ const newUserEmail = document.querySelector("#newUserEmail");
 const newUserPassword = document.querySelector("#newUserPassword");
 const newUserRole = document.querySelector("#newUserRole");
 const usersList = document.querySelector("#usersList");
+const movieDetails = document.querySelector("#movieDetails");
+const moviePoster = document.querySelector("#moviePoster");
+const movieTitle = document.querySelector("#movieTitle");
+const movieMeta = document.querySelector("#movieMeta");
+const movieDescription = document.querySelector("#movieDescription");
 
 let channels = [];
 let currentUser = null;
@@ -101,6 +106,15 @@ document.addEventListener("keydown", (event) => {
 
 function setStatus(message) {
   statusText.textContent = message;
+}
+
+function clearMovieDetails() {
+  movieDetails.hidden = true;
+  moviePoster.hidden = true;
+  moviePoster.removeAttribute("src");
+  movieTitle.textContent = "";
+  movieMeta.textContent = "";
+  movieDescription.textContent = "";
 }
 
 async function apiFetch(url, options = {}) {
@@ -326,6 +340,38 @@ async function requestStream(channelId) {
   return response.json();
 }
 
+async function loadMovieInfo(channel) {
+  clearMovieDetails();
+  if (!channel.metadataId) return;
+
+  try {
+    const response = await apiFetch(`/api/channels/${encodeURIComponent(channel.id)}/info`);
+    if (!response.ok) return;
+
+    const info = await response.json();
+    if (!info.available) return;
+
+    const title = info.name || channel.name;
+    const meta = [info.year, info.genre, info.duration, info.rating ? `Nota ${info.rating}` : ""].filter(Boolean).join(" | ");
+
+    channel.name = title;
+    nowTitle.textContent = title;
+    movieTitle.textContent = title;
+    movieMeta.textContent = meta;
+    movieDescription.textContent = info.description || "Descricao indisponivel.";
+
+    if (info.poster && /^https?:\/\//i.test(info.poster)) {
+      moviePoster.src = info.poster;
+      moviePoster.hidden = false;
+    }
+
+    movieDetails.hidden = false;
+    renderChannels();
+  } catch (error) {
+    console.warn("Nao foi possivel carregar detalhes do filme.", error);
+  }
+}
+
 async function playChannelById(channelId, isReload = false) {
   const channel = channels.find((item) => item.id === channelId);
   if (!channel) {
@@ -341,6 +387,7 @@ async function playChannelById(channelId, isReload = false) {
   activeMode = channel.mode || "hls";
   setActiveChannel();
   nowTitle.textContent = channel.name;
+  loadMovieInfo(channel);
   setStatus(isReload ? "Atualizando transmissao..." : "Carregando transmissao...");
   showVideo();
 
@@ -404,6 +451,7 @@ function stopStream() {
   activeStreamUrl = "";
   activeMode = "auto";
   nowTitle.textContent = "Tela inicial";
+  clearMovieDetails();
   clearInterval(stallTimer);
   clearInterval(bufferTimer);
   clearInterval(delayTimer);
